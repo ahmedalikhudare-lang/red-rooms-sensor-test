@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RED ROOMS — اختبار الحساس</title>
+<style>
+:root{
+  --bg:#080506; --panel:#130b0c; --panel2:#1b1011; --line:#2e1b1d; --text:#ecdfe0; --muted:#9b8587;
+  --red:#e3232c; --red-dim:#6d0f15; --ok:#3ccf7a; --warn:#ffb020;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI",Tahoma,"Noto Sans Arabic",sans-serif}
+body{min-height:100vh}
+button{font:inherit;cursor:pointer;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+.live{display:flex;align-items:center;gap:6px;font:700 12px Consolas,monospace;letter-spacing:.15em;color:#fff;background:var(--red);padding:4px 8px;border-radius:3px;direction:ltr}
+.live .dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+h1{margin:0;font-size:22px;letter-spacing:.04em}
+h1 small{display:block;font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0;margin-top:2px}
+.btn{background:var(--red);border:0;color:#fff;padding:12px 22px;border-radius:6px;font-weight:700;font-size:16px}
+.btn:hover{filter:brightness(1.12)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:500;font-size:14px;padding:9px 14px}
+.btn.ghost:hover{border-color:var(--red)}
+
+/* start */
+#start{max-width:620px;margin:60px auto;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:34px 24px}
+#start p{color:var(--muted);line-height:1.8;margin:0 0 10px}
+#start .warn{color:var(--warn)}
+#loadMsg{margin-top:16px;color:var(--muted);min-height:1.5em;font-size:14px}
+
+/* app */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.camBox{position:relative;border-radius:8px;overflow:hidden;background:#000;aspect-ratio:4/3}
+.mirror{position:absolute;inset:0;transform:scaleX(-1)}
+.mirror video,.mirror canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+video{filter:grayscale(.75) contrast(1.25) brightness(.9) sepia(.25)}
+.camBox::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,.22) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65));}
+.hud{position:absolute;top:8px;left:10px;right:10px;display:flex;justify-content:space-between;font:12px Consolas,monospace;color:#fff;text-shadow:0 0 4px #000;direction:ltr;z-index:2}
+.hud .rec{color:var(--red)}
+.meters{margin-top:12px;display:grid;gap:8px}
+.meter{display:grid;grid-template-columns:110px 1fr 92px;align-items:center;gap:10px;font-size:13px}
+.meter .lbl{color:var(--muted)}
+.bar{position:relative;height:10px;background:#0a0606;border:1px solid var(--line);border-radius:5px;overflow:hidden;direction:ltr}
+.bar i{position:absolute;inset:0 auto 0 0;width:0;background:#8a7a7c;transition:width .06s linear}
+.bar b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--warn)}
+.meter .val{font:12px Consolas,monospace;text-align:left;direction:ltr}
+.hot{color:var(--red)} .cool{color:var(--ok)}
+
+.cards{display:grid;gap:12px}
+.card{display:grid;grid-template-columns:1fr auto;gap:4px 12px;text-align:right;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;transition:border-color .15s,transform .15s}
+.card:hover{border-color:var(--red);transform:translateY(-1px)}
+.card .code{grid-column:1/-1;font:12px Consolas,monospace;color:var(--muted);direction:ltr;text-align:right}
+.card .name{font-size:20px;font-weight:800}
+.card .key{font:11px Consolas,monospace;color:var(--muted);align-self:center;border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.card .rule{grid-column:1/-1;font-size:14px;line-height:1.7}
+.card .from{grid-column:1/-1;font-size:12px;color:var(--muted)}
+.card .now{grid-column:1/-1;font-size:13px;font-weight:700;margin-top:4px}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+details{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+summary{cursor:pointer;color:var(--muted);font-size:14px}
+.sl{display:grid;grid-template-columns:150px 1fr 56px;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.sl input{width:100%;accent-color:var(--red)}
+.sl output{font:12px Consolas,monospace;direction:ltr;text-align:left}
+#notes{margin-bottom:12px;display:grid;gap:6px}
+#notes div{background:#2a1a08;border:1px solid #5a3a10;color:#ffd38a;border-radius:6px;padding:8px 12px;font-size:13px}
+.hint{color:var(--muted);font-size:12px;margin-top:10px;line-height:1.7}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:radial-gradient(ellipse at center,rgba(40,0,4,.88),rgba(0,0,0,.96))}
+.overlay[hidden]{display:none}
+.stageBox{width:min(560px,100%);text-align:center;border:1px solid var(--line);border-radius:12px;padding:26px 22px;background:rgba(10,5,6,.85)}
+.stageBox.check{border-color:var(--red);animation:pulse 1s ease-in-out infinite}
+.stageBox.safe{border-color:var(--ok)}
+@keyframes pulse{50%{box-shadow:0 0 40px rgba(227,35,44,.45)}}
+.tag{font:12px Consolas,monospace;color:var(--muted);letter-spacing:.12em;direction:ltr}
+.big{font-size:28px;font-weight:800;margin:10px 0 8px;line-height:1.4}
+.stRule{color:var(--muted);line-height:1.8;min-height:1.8em}
+.prog{height:6px;background:#1c1012;border-radius:3px;overflow:hidden;margin:18px 0 12px;direction:rtl}
+.prog i{display:block;height:100%;width:0;background:var(--warn)}
+.stageBox.check .prog i{background:var(--red)}
+.stageBox.safe .prog i{background:var(--ok)}
+.stLive{font-weight:700;min-height:1.6em}
+.danger{height:4px;background:#1c1012;border-radius:2px;overflow:hidden;margin:8px auto 14px;width:60%;direction:ltr}
+.danger i{display:block;height:100%;width:0;background:var(--red)}
+#scare{position:fixed;inset:0;z-index:50;background:#000}
+#scare[hidden]{display:none}
+#scareCv{width:100%;height:100%;display:block}
+.resBox{width:min(520px,100%);text-align:center;border:1px solid var(--red);border-radius:12px;padding:30px 22px;background:rgba(10,5,6,.9)}
+.resBox.win{border-color:var(--ok)}
+.resBox .sub{color:var(--muted);line-height:1.8}
+.resBox .row{justify-content:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="live"><span class="dot"></span>LIVE</div>
+    <h1>RED ROOMS<small>اختبار حساس الكاميرا والمايك — نسخة تجريبية</small></h1>
+  </header>
+
+  <section id="start">
+    <p>هذا اختبار طور البث الحقيقي: الكاميرا والمايك يقررون إذا نجوت من الدمى الثلاث.</p>
+    <p>كل المعالجة على جهازك، ما يتسجل ولا يترسل شي.</p>
+    <p class="warn">⚠ صوت الجمب سكير عالي.</p>
+    <button class="btn" id="btnStart">شغّل الكاميرا والمايك</button>
+    <div id="loadMsg"></div>
+  </section>
+
+  <main id="app" hidden>
+    <div id="notes"></div>
+    <div class="grid">
+      <div class="panel">
+        <div class="camBox">
+          <div class="mirror"><video id="video" playsinline muted></video><canvas id="ov"></canvas></div>
+          <div class="hud"><span>CAM 00 · YOU</span><span class="rec">● REC</span></div>
+        </div>
+        <div class="meters">
+          <div class="meter"><span class="lbl">الوجه</span><div class="bar"><i id="mFace"></i></div><span class="val" id="vFace">—</span></div>
+          <div class="meter"><span class="lbl">غمض العيون</span><div class="bar"><i id="mEye"></i><b id="tEye"></b></div><span class="val" id="vEye">—</span></div>
+          <div class="meter"><span class="lbl">الحركة</span><div class="bar"><i id="mMot"></i><b id="tMot"></b></div><span class="val" id="vMot">—</span></div>
+          <div class="meter"><span class="lbl">الصوت</span><div class="bar"><i id="mMic"></i><b id="tMic"></b></div><span class="val" id="vMic">—</span></div>
+        </div>
+        <div class="hint">الخط الأصفر = حد المخالفة. إذا الحساس حساس زيادة أو ناقص، عدّله من "الحساسية" تحت.</div>
+      </div>
+
+      <div>
+        <div class="cards" id="cards"></div>
+        <div class="row">
+          <button class="btn" id="btnNight">ليلة عشوائية (٥ زيارات)</button>
+          <button class="btn ghost" id="btnCalib">إعادة المعايرة</button>
+          <button class="btn ghost" id="btnScare">جرّب الجمب سكير</button>
+        </div>
+        <details>
+          <summary>الحساسية (للضبط)</summary>
+          <div class="sl"><label for="sMot">حد الحركة — الأب</label><input id="sMot" type="range" min="0.5" max="15" step="0.1"><output id="oMot"></output></div>
+          <div class="sl"><label for="sGaze">حركة البؤبؤ — الأب</label><input id="sGaze" type="range" min="0.02" max="0.3" step="0.01"><output id="oGaze"></output></div>
+          <div class="sl"><label for="cBlink">الرمش يموّت — الأب</label><input id="cBlink" type="checkbox" checked style="justify-self:start;width:auto"><output></output></div>
+          <div class="sl"><label for="sMic">حد الصوت — الأب</label><input id="sMic" type="range" min="10" max="95" step="1"><output id="oMic"></output></div>
+          <div class="sl"><label for="sEye">غمض العين — الطفل</label><input id="sEye" type="range" min="0.2" max="0.9" step="0.01"><output id="oEye"></output></div>
+          <div class="sl"><label for="sDur">مدة الاختبار (ث)</label><input id="sDur" type="range" min="3" max="15" step="1"><output id="oDur"></output></div>
+        </details>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="stage" hidden>
+  <div class="stageBox" id="stBox">
+    <div class="tag" id="stTag"></div>
+    <div class="big" id="stTitle"></div>
+    <div class="stRule" id="stRule"></div>
+    <div class="prog"><i id="stProg"></i></div>
+    <div class="stLive" id="stLive"></div>
+    <div class="danger"><i id="stDanger"></i></div>
+    <button class="btn ghost" id="btnCancel">إلغاء (Esc)</button>
+  </div>
+</div>
+
+<div id="scare" hidden><canvas id="scareCv"></canvas></div>
+
+<div class="overlay" id="result" hidden>
+  <div class="resBox" id="resBox">
+    <div class="big" id="resTitle"></div>
+    <div class="sub" id="resSub"></div>
+    <div class="row">
+      <button class="btn" id="btnAgain">مرة ثانية</button>
+      <button class="btn ghost" id="btnHome">رجوع</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ================= config =================
+const VISION_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const MODEL_URL  = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const r1 = (v) => Math.round(v * 10) / 10;
+
+const CFG = { motionThr: 3, micThr: 45, eyeThr: 0.45, gazeThr: 0.08, blinkKills: true, checkSec: 6 };
+// live sensor state (blink = least-closed eye, blinkMax = most-closed eye, gaze = pupil position inside the eye)
+const S = { face: false, blink: 0, blinkMax: 0, gaze: null, motion: 0, mic: 0, box: null, camOK: false, micOK: false, faceOK: false };
+
+// --- pupil tracking: where each iris sits between its eye corners (head-movement independent) ---
+const EYE_CORNERS = [[33, 133], [362, 263]];
+const IRIS_CENTERS = [468, 473];
+function gazeOf(lm) {
+  let gx = 0, gy = 0;
+  for (const ic of IRIS_CENTERS) {
+    const c = lm[ic];
+    let eye = null, bd = Infinity; // the eye whose corners surround this iris
+    for (const [a, b] of EYE_CORNERS) {
+      const dd = Math.hypot(c.x - (lm[a].x + lm[b].x) / 2, c.y - (lm[a].y + lm[b].y) / 2);
+      if (dd < bd) { bd = dd; eye = [lm[a], lm[b]]; }
+    }
+    const [p1, p2] = eye, ex = p2.x - p1.x, ey = p2.y - p1.y, L2 = ex * ex + ey * ey;
+    const rx = c.x - p1.x, ry = c.y - p1.y;
+    gx += (rx * ex + ry * ey) / L2; // along the eye, in eye widths
+    gy += (rx * ey - ry * ex) / L2; // up/down, in eye widths
+  }
+  return [gx / 2, gy / 2];
+}
+let gazeRef = null; // pupil position taken when the Father arrives
+function gazeDrift() {
+  if (!gazeRef || !S.gaze) return 0;
+  return Math.hypot(S.gaze[0] - gazeRef[0], (S.gaze[1] - gazeRef[1]) * 0.8);
+}
+
+const CHARS = {
+  father: {
+    key: '1', code: 'PF-01', name: 'الأب', sense: 'يسمع', from: 'الباب — يسار',
+    rule: 'اثبت قدام الكاميرا: لا تتحرك، لا ترمش، لا تحرك عيونك، ولا تسوي أي صوت.',
+    approach: 'خطوات حديد عند الباب… والجرس', arrived: 'الأب عند الباب. اثبت!',
+    okText: 'ساكن', safeText: 'فقد الإشارة ورجع…', dieTitle: 'الأب دخل عليك', grace: 250,
+  },
+  mother: {
+    key: '2', code: 'PF-02', name: 'الأم', sense: 'تشوف', from: 'الشباك — فوق',
+    rule: 'اختبئ: لا تخلي الكاميرا تشوف وجهك (اطلع من الكادر، طفّ النور، أو غطِّ الكاميرا).',
+    approach: 'تشويش من الشباك… عدستها تدوّر', arrived: 'الأم تطل من الشباك. اختبئ!',
+    okText: 'مخفي', safeText: 'عدستها راحت…', dieTitle: 'الأم شافتك', grace: 400,
+  },
+  child: {
+    key: '3', code: 'PF-03', name: 'الطفل', sense: 'يحس بالنظرات', from: 'الحمام — يمين',
+    rule: 'غمّض عيونك الاثنتين ووجهك مكشوف للكاميرا لين يوقف صندوق الموسيقى. تغطية الوجه ما تنفع.',
+    approach: 'بكاء من الحمام…', arrived: 'الطفل طالع من الحمام. غمّض!',
+    okText: 'مغمّض', safeText: 'وقف صندوق الموسيقى… افتح', dieTitle: 'طالعت في الطفل', grace: 400,
+  },
+};
+const TYPES = Object.keys(CHARS);
+
+// ================= sensors =================
+const video = $('#video');
+const ov = $('#ov'), ovx = ov.getContext('2d');
+let ac, master, NOISE, analyser, micData, landmarker;
+let lastVT = -1, lastTS = 0;
+const SW = 80, SH = 60;
+const sc = document.createElement('canvas'); sc.width = SW; sc.height = SH;
+const sctx = sc.getContext('2d', { willReadFrequently: true });
+const curGray = new Float32Array(SW * SH);
+let prevGray = null;
+
+function sense(now) {
+  if (S.camOK && video.readyState >= 2 && video.currentTime !== lastVT) {
+    lastVT = video.currentTime;
+
+    // --- face + eyes (MediaPipe) ---
+    if (landmarker) {
+      const ts = Math.max(now, lastTS + 1); lastTS = ts;
+      const r = landmarker.detectForVideo(video, ts);
+      const lm = r.faceLandmarks && r.faceLandmarks[0];
+      S.face = !!lm;
+      if (lm) {
+        let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+        for (const p of lm) { if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x; if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y; }
+        S.box = [x0, y0, x1, y1];
+        const g = gazeOf(lm); // light smoothing against landmark jitter
+        S.gaze = S.gaze ? [S.gaze[0] * 0.4 + g[0] * 0.6, S.gaze[1] * 0.4 + g[1] * 0.6] : g;
+        let L = 0, R = 0;
+        for (const c of (r.faceBlendshapes?.[0]?.categories || [])) {
+          if (c.categoryName === 'eyeBlinkLeft') L = c.score;
+          else if (c.categoryName === 'eyeBlinkRight') R = c.score;
+        }
+        S.blink = Math.min(L, R); // the more-open eye decides: one eye peeking = open
+        S.blinkMax = Math.max(L, R); // any eye closing = a blink
+      } else { S.box = null; S.gaze = null; S.blink = 0; S.blinkMax = 0; }
+    }
+
+    // --- motion: frame difference on an 80x60 grey copy (global brightness shift removed) ---
+    sctx.drawImage(video, 0, 0, SW, SH);
+    const d = sctx.getImageData(0, 0, SW, SH).data;
+    for (let i = 0, j = 0; i < curGray.length; i++, j += 4) curGray[i] = d[j] * 0.299 + d[j + 1] * 0.587 + d[j + 2] * 0.114;
+    if (prevGray) {
+      let mean = 0;
+      for (let i = 0; i < curGray.length; i++) mean += curGray[i] - prevGray[i];
+      mean /= curGray.length;
+      let sum = 0;
+      for (let i = 0; i < curGray.length; i++) sum += Math.abs(curGray[i] - prevGray[i] - mean);
+      S.motion = S.motion * 0.5 + (sum / curGray.length) * 0.5;
+    } else prevGray = new Float32Array(curGray.length);
+    prevGray.set(curGray);
+  }
+
+  // --- mic level 0..100 with peak hold ---
+  if (analyser) {
+    analyser.getFloatTimeDomainData(micData);
+    let s = 0; for (let i = 0; i < micData.length; i++) s += micData[i] * micData[i];
+    const db = 20 * Math.log10(Math.sqrt(s / micData.length) + 1e-9);
+    S.mic = Math.max(clamp((db + 80) / 70 * 100, 0, 100), S.mic * 0.9);
+  }
+}
+
+// rule check per doll -> { msg, grace } when the player breaks it, or null if obeying.
+// grace = how many ms the break must last before the doll gets you.
+function violation(type) {
+  const hit = (msg, grace = CHARS[type].grace) => ({ msg, grace });
+  if (type === 'father') {
+    if (S.faceOK) {
+      if (!S.face) return hit('اختفيت عن الكاميرا — لازم تثبت قدامها');
+      if (CFG.blinkKills && S.blinkMax >= CFG.eyeThr) return hit('رمشت — الأب حس فيك', 80);
+      if (gazeRef && gazeDrift() > CFG.gazeThr) return hit('حركت عيونك — الأب حس فيك', 120);
+    }
+    if (S.camOK && S.motion > CFG.motionThr) return hit('تحركت — الأب حس فيك');
+    if (S.micOK && S.mic > CFG.micThr) return hit('سوّيت صوت — الأب سمعك');
+  } else if (type === 'mother') {
+    if (S.face) return hit('عدستها لقطت وجهك');
+  } else if (type === 'child') {
+    // the camera must SEE both eyes closed: covering the face (and peeking through the fingers) counts as a violation
+    if (!S.face) return hit('غطيت وجهك — الطفل لازم يشوف عيونك مغمّضة');
+    if (S.blink < CFG.eyeThr) return hit('فتحت عيونك — طالعت فيه');
+  }
+  return null;
+}
+function sensorReady(type) {
+  if (type === 'father') return S.camOK || S.micOK;
+  return S.faceOK;
+}
+
+// ================= main loop =================
+const tickers = new Set();
+let lastNow = performance.now();
+function loop(now) {
+  const dt = Math.min(100, now - lastNow); lastNow = now;
+  sense(now);
+  updateUI();
+  for (const t of [...tickers]) t(dt);
+  requestAnimationFrame(loop);
+}
+// run fn(progress, dt) every frame for ms; fn returning true stops early. resolves false if cancelled.
+function timed(ms, fn, tok) {
+  return new Promise((res) => {
+    let el = 0;
+    const tick = (dt) => {
+      if (tok && tok.cancelled) { tickers.delete(tick); return res(false); }
+      el += dt;
+      const stop = fn ? fn(Math.min(1, el / ms), dt, el) : false;
+      if (stop || el >= ms) { tickers.delete(tick); res(true); }
+    };
+    tickers.add(tick);
+  });
+}
+
+// ================= UI =================
+function buildCards() {
+  $('#cards').innerHTML = TYPES.map((t) => {
+    const C = CHARS[t];
+    return `<button class="card" data-type="${t}">
+      <div class="code">${C.code} · ${C.sense}</div>
+      <div class="name">${C.name}</div><div class="key">${C.key}</div>
+      <div class="from">يجي من: ${C.from}</div>
+      <div class="rule">${C.rule}</div>
+      <div class="now" id="now-${t}">—</div>
+    </button>`;
+  }).join('');
+  document.querySelectorAll('.card').forEach((b) => b.addEventListener('click', () => playSingle(b.dataset.type)));
+}
+
+function setBar(id, frac) { $(id).style.width = (clamp(frac, 0, 1) * 100).toFixed(1) + '%'; }
+function setVal(id, txt, hot) { const e = $(id); e.textContent = txt; e.className = 'val ' + (hot ? 'hot' : 'cool'); }
+
+function updateUI() {
+  setBar('#mFace', S.face ? 1 : 0);
+  setVal('#vFace', !S.faceOK ? 'متوقف' : S.face ? 'ظاهر' : 'مخفي', S.face);
+  setBar('#mEye', S.face ? S.blink : 0);
+  setVal('#vEye', !S.face ? '—' : (S.blink >= CFG.eyeThr ? 'مغمّضة ' : 'مفتوحة ') + S.blink.toFixed(2), S.face && S.blink < CFG.eyeThr);
+  setBar('#mMot', S.motion / 15);
+  setVal('#vMot', S.camOK ? S.motion.toFixed(1) : 'متوقف', S.motion > CFG.motionThr);
+  setBar('#mMic', S.mic / 100);
+  setVal('#vMic', S.micOK ? Math.round(S.mic).toString() : 'متوقف', S.mic > CFG.micThr);
+  $('#tEye').style.left = (CFG.eyeThr * 100) + '%';
+  $('#tMot').style.left = (CFG.motionThr / 15 * 100) + '%';
+  $('#tMic').style.left = CFG.micThr + '%';
+
+  for (const t of TYPES) {
+    const e = $('#now-' + t); if (!e) continue;
+    if (!sensorReady(t)) { e.textContent = 'الحساس متوقف'; e.className = 'now'; continue; }
+    const v = violation(t);
+    e.textContent = v ? '✗ الحين: ' + v.msg : '✓ الحين: ' + CHARS[t].okText;
+    e.className = 'now ' + (v ? 'hot' : 'cool');
+  }
+
+  // face box on the camera preview
+  if (ov.width !== video.videoWidth && video.videoWidth) { ov.width = video.videoWidth; ov.height = video.videoHeight; }
+  ovx.clearRect(0, 0, ov.width, ov.height);
+  if (S.box) {
+    const [x0, y0, x1, y1] = S.box, W = ov.width, H = ov.height;
+    const x = x0 * W, y = y0 * H, w = (x1 - x0) * W, h = (y1 - y0) * H, k = Math.min(w, h) * 0.22;
+    ovx.strokeStyle = '#e3232c'; ovx.lineWidth = 3; ovx.beginPath();
+    ovx.moveTo(x, y + k); ovx.lineTo(x, y); ovx.lineTo(x + k, y);
+    ovx.moveTo(x + w - k, y); ovx.lineTo(x + w, y); ovx.lineTo(x + w, y + k);
+    ovx.moveTo(x + w, y + h - k); ovx.lineTo(x + w, y + h); ovx.lineTo(x + w - k, y + h);
+    ovx.moveTo(x + k, y + h); ovx.lineTo(x, y + h); ovx.lineTo(x, y + h - k);
+    ovx.stroke();
+  }
+}
+
+function note(msg) { const d = document.createElement('div'); d.textContent = msg; $('#notes').appendChild(d); }
+function setLoad(msg) { $('#loadMsg').textContent = msg; }
+
+// stage overlay
+function openStage(o) {
+  $('#stage').hidden = false;
+  $('#stBox').className = 'stageBox ' + (o.mode || '');
+  $('#stTag').textContent = o.tag || '';
+  $('#stTitle').textContent = o.title || '';
+  $('#stRule').textContent = o.rule || '';
+  $('#stLive').textContent = ''; $('#stLive').className = 'stLive';
+  $('#stProg').style.width = '0%'; $('#stDanger').style.width = '0%';
+  $('#btnCancel').hidden = o.cancel === false;
+}
+function closeStage() { $('#stage').hidden = true; }
+function setProg(p) { $('#stProg').style.width = (p * 100).toFixed(1) + '%'; }
+
+// sliders
+$('#cBlink').addEventListener('change', () => { CFG.blinkKills = $('#cBlink').checked; });
+const SL = [
+  ['#sMot', '#oMot', 'motionThr', (v) => v.toFixed(1)],
+  ['#sGaze', '#oGaze', 'gazeThr', (v) => v.toFixed(2)],
+  ['#sMic', '#oMic', 'micThr', (v) => String(Math.round(v))],
+  ['#sEye', '#oEye', 'eyeThr', (v) => v.toFixed(2)],
+  ['#sDur', '#oDur', 'checkSec', (v) => v + 'ث'],
+];
+function syncSliders() { for (const [s, o, k, f] of SL) { $(s).value = CFG[k]; $(o).textContent = f(CFG[k]); } }
+for (const [s, o, k, f] of SL) $(s).addEventListener('input', () => { CFG[k] = parseFloat($(s).value); $(o).textContent = f(CFG[k]); });
+
+// ================= audio =================
+function initAudio() {
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -8; comp.ratio.value = 6;
+  master = ac.createGain(); master.gain.value = 0.9;
+  master.connect(comp).connect(ac.destination);
+  NOISE = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+  const d = NOISE.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+function env(g, at, peak, attack, release) {
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(peak, at + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + attack + release);
+}
+function noiseSrc(loop) { const n = ac.createBufferSource(); n.buffer = NOISE; n.loop = !!loop; return n; }
+
+function thump(at, vol) {
+  const n = noiseSrc(); const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 240;
+  const g = ac.createGain(); env(g, at, vol, 0.008, 0.22);
+  n.connect(lp).connect(g).connect(master); n.start(at, Math.random()); n.stop(at + 0.3);
+  const o = ac.createOscillator(); o.frequency.setValueAtTime(95, at); o.frequency.exponentialRampToValueAtTime(38, at + 0.16);
+  const og = ac.createGain(); env(og, at, vol * 0.9, 0.005, 0.18);
+  o.connect(og).connect(master); o.start(at); o.stop(at + 0.25);
+  // metal clink
+  const n2 = noiseSrc(); const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 6;
+  const g2 = ac.createGain(); env(g2, at + 0.01, vol * 0.5, 0.003, 0.08);
+  n2.connect(bp).connect(g2).connect(master); n2.start(at, Math.random()); n2.stop(at + 0.15);
+}
+function bell(at, base = 660, dur = 1.1, vol = 0.32) {
+  for (const [m, g] of [[1, 1], [2, 0.45], [2.76, 0.5], [4.07, 0.25], [5.4, 0.15]]) {
+    const o = ac.createOscillator(); o.frequency.value = base * m;
+    const gg = ac.createGain(); env(gg, at, vol * g, 0.004, dur * (1.15 - m * 0.1));
+    o.connect(gg).connect(master); o.start(at); o.stop(at + dur * 1.2);
+  }
+}
+function staticNoise(at, dur, vol, dest) {
+  const n = noiseSrc(true); const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1600;
+  const g = ac.createGain(); g.gain.setValueAtTime(0, at);
+  for (let x = 0; x < dur; x += 0.05) g.gain.setValueAtTime(vol * (0.15 + Math.random() * 0.85) * (0.4 + 0.6 * x / dur), at + x);
+  g.gain.setValueAtTime(0, at + dur);
+  n.connect(hp).connect(g).connect(dest || master); n.start(at); n.stop(at + dur + 0.05);
+}
+function hum(at, dur, vol, dest) {
+  const o = ac.createOscillator(); o.type = 'square'; o.frequency.value = 50;
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380;
+  const g = ac.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.2);
+  g.gain.setValueAtTime(vol, at + dur - 0.2); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(lp).connect(g).connect(dest || master); o.start(at); o.stop(at + dur + 0.05);
+}
+function whir(at) {
+  const o = ac.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(1700, at); o.frequency.exponentialRampToValueAtTime(2900, at + 0.35); o.frequency.exponentialRampToValueAtTime(2100, at + 0.55);
+  const g = ac.createGain(); env(g, at, 0.06, 0.02, 0.55);
+  o.connect(g).connect(master); o.start(at); o.stop(at + 0.6);
+}
+function cry(at) {
+  const o = ac.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(470, at); o.frequency.linearRampToValueAtTime(560, at + 0.15); o.frequency.linearRampToValueAtTime(390, at + 0.72);
+  const lfo = ac.createOscillator(); lfo.frequency.value = 7; const lg = ac.createGain(); lg.gain.value = 16; lfo.connect(lg).connect(o.frequency);
+  const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1150; bp.Q.value = 2.5;
+  const g = ac.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.16, at + 0.08);
+  g.gain.setValueAtTime(0.16, at + 0.5); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.75);
+  o.connect(bp).connect(g).connect(master); o.start(at); lfo.start(at); o.stop(at + 0.8); lfo.stop(at + 0.8);
+}
+function pluck(at, f, dest) {
+  const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+  const o2 = ac.createOscillator(); o2.frequency.value = f * 2.01;
+  const g = ac.createGain(); env(g, at, 0.2, 0.004, 0.85);
+  const g2 = ac.createGain(); g2.gain.value = 0.3;
+  o.connect(g); o2.connect(g2).connect(g); g.connect(dest);
+  o.start(at); o2.start(at); o.stop(at + 0.95); o2.stop(at + 0.95);
+}
+// winding-down music box for `sec` seconds
+function musicBox(sec, dest) {
+  const notes = [76, 79, 81, 79, 76, 74, 76, 72, 74, 76, 79, 76, 74, 72, 71, 72, 76, 79, 81, 83];
+  const t = ac.currentTime + 0.05; let x = 0, i = 0;
+  while (x < sec - 0.4) {
+    const p = x / sec;
+    const f = 440 * Math.pow(2, (notes[i % notes.length] - 69) / 12) * (1 - 0.035 * p * p);
+    pluck(t + x, f, dest);
+    x += 0.32 * (1 + 1.6 * p * p * p); i++;
+  }
+}
+function chime() {
+  const t = ac.currentTime;
+  for (const [f, d] of [[523, 0], [784, 0.14]]) {
+    const o = ac.createOscillator(); o.frequency.value = f; const g = ac.createGain(); env(g, t + d, 0.12, 0.01, 0.6);
+    o.connect(g).connect(master); o.start(t + d); o.stop(t + d + 0.7);
+  }
+}
+function distCurve(k) { const n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; c[i] = (1 + k) * x / (1 + k * Math.abs(x)); } return c; }
+function scream() {
+  const t = ac.currentTime;
+  const out = ac.createGain();
+  out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(1, t + 0.02);
+  out.gain.setValueAtTime(1, t + 1.0); out.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+  const sh = ac.createWaveShaper(); sh.curve = distCurve(50); sh.oversample = '2x';
+  sh.connect(out).connect(master);
+  const n = noiseSrc(); const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.8;
+  bp.frequency.setValueAtTime(900, t); bp.frequency.exponentialRampToValueAtTime(3200, t + 0.25); bp.frequency.exponentialRampToValueAtTime(1500, t + 1.6);
+  const ng = ac.createGain(); ng.gain.value = 0.9;
+  n.connect(bp).connect(ng).connect(sh); n.start(t); n.stop(t + 1.8);
+  const lfo = ac.createOscillator(); lfo.frequency.value = 34; const lg = ac.createGain(); lg.gain.value = 60; lfo.connect(lg);
+  for (const [f, g] of [[380, 0.35], [531, 0.3], [742, 0.25], [1210, 0.12]]) {
+    const o = ac.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f * 0.6, t); o.frequency.exponentialRampToValueAtTime(f * 1.25, t + 0.18); o.frequency.exponentialRampToValueAtTime(f * 0.85, t + 1.6);
+    lg.connect(o.frequency);
+    const og = ac.createGain(); og.gain.value = g; o.connect(og).connect(sh); o.start(t); o.stop(t + 1.75);
+  }
+  lfo.start(t); lfo.stop(t + 1.75);
+  const b = ac.createOscillator(); b.frequency.setValueAtTime(120, t); b.frequency.exponentialRampToValueAtTime(35, t + 0.6);
+  const bg = ac.createGain(); bg.gain.setValueAtTime(0.9, t); bg.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+  b.connect(bg).connect(master); b.start(t); b.stop(t + 0.85);
+}
+
+// cue while the doll approaches (3 s), and ambience while it checks you
+const CUES = {
+  father() { const t = ac.currentTime; [0.25, 0.35, 0.5, 0.7].forEach((v, i) => thump(t + i * 0.4, v)); bell(t + 1.65); bell(t + 1.95, 660, 0.8, 0.2); },
+  mother() { const t = ac.currentTime; staticNoise(t, 2.8, 0.2); hum(t, 2.8, 0.07); whir(t + 2.1); },
+  child() { const t = ac.currentTime; cry(t + 0.1); cry(t + 0.95); cry(t + 1.8); },
+};
+const AMBIENT = {
+  father: null, // silence: the mic is listening, so the game must stay quiet
+  mother(sec, g) { const t = ac.currentTime; staticNoise(t, sec, 0.05, g); hum(t, sec, 0.05, g); },
+  child(sec, g) { musicBox(sec, g); },
+};
+
+// ================= jumpscare =================
+const scareCv = $('#scareCv'), sx = scareCv.getContext('2d');
+const grain = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  const id = g.createImageData(128, 128);
+  for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+  g.putImageData(id, 0, 0); return c;
+})();
+
+function rr(c, x, y, w, h, r) {
+  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+  c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
+  c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
+}
+function glowDot(c, x, y, r, col, blur) { c.save(); c.shadowColor = col; c.shadowBlur = blur; c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.fill(); c.restore(); }
+
+function drawFace(c, W, H, type, t, scale, ox, oy) {
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  c.save();
+  const base = Math.min(W, H) / 560;
+  c.translate(W / 2 + ox, H / 2 + oy); c.scale(base * scale, base * scale);
+  const jaw = 0.55 + 0.45 * Math.abs(Math.sin(t * 19));
+  const P = { father: ['#b9ad92', '#221c15', '#fff4d0'], mother: ['#c8c1b6', '#1f1b18', '#ff2020'], child: ['#d6c9b1', '#2a2117', '#c4e8ff'] }[type];
+
+  // back decor
+  if (type === 'child') { // wind-up key
+    c.fillStyle = '#6b5a3a'; c.fillRect(200, -8, 70, 16);
+    c.beginPath(); c.ellipse(285, -38, 22, 34, 0, 0, 7); c.ellipse(285, 38, 22, 34, 0, 0, 7); c.fill();
+  }
+  if (type === 'father') { // bell under the chin
+    const g = c.createLinearGradient(-50, 250, 50, 330); g.addColorStop(0, '#c9a24a'); g.addColorStop(1, '#5a4210');
+    c.fillStyle = g; c.beginPath(); c.moveTo(-28, 250); c.quadraticCurveTo(-32, 300, -55, 320); c.lineTo(55, 320); c.quadraticCurveTo(32, 300, 28, 250); c.closePath(); c.fill();
+  }
+
+  // head
+  const g = c.createRadialGradient(-70, -140, 30, 0, 0, 340); g.addColorStop(0, P[0]); g.addColorStop(1, P[1]);
+  c.fillStyle = g; c.beginPath();
+  if (type === 'father') rr(c, -205, -255, 410, 500, 95);
+  else if (type === 'mother') c.ellipse(0, -5, 185, 262, 0, 0, 7);
+  else c.ellipse(0, 15, 205, 215, 0, 0, 7);
+  c.fill();
+  if (type === 'mother') { // hair plate
+    c.fillStyle = '#2a201c'; c.beginPath(); c.ellipse(0, -150, 190, 120, 0, Math.PI, 0); c.fill();
+  }
+  // grime
+  for (let i = 0; i < 6; i++) {
+    const gx = Math.sin(i * 7.1) * 140, gy = Math.cos(i * 3.3) * 170;
+    const gg = c.createRadialGradient(gx, gy, 0, gx, gy, 70); gg.addColorStop(0, 'rgba(40,20,10,.35)'); gg.addColorStop(1, 'rgba(40,20,10,0)');
+    c.fillStyle = gg; c.beginPath(); c.arc(gx, gy, 70, 0, 7); c.fill();
+  }
+  // seams + rivets
+  c.strokeStyle = 'rgba(20,10,5,.55)'; c.lineWidth = 5; c.beginPath();
+  c.moveTo(0, -250); c.lineTo(0, -125); c.moveTo(-195, 45); c.quadraticCurveTo(0, 72, 195, 45); c.stroke();
+  c.fillStyle = 'rgba(30,20,10,.75)';
+  for (const [x, y] of [[-150, 50], [-75, 60], [75, 60], [150, 50], [0, -205], [0, -160]]) { c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); }
+
+  // eyes
+  const ey = type === 'child' ? -30 : -55, ex = type === 'child' ? 88 : 92, er = type === 'child' ? 64 : 52;
+  for (const s of [-1, 1]) {
+    c.fillStyle = '#050202'; c.beginPath(); c.ellipse(s * ex, ey, er * 1.08, er * 0.92, 0, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.6)'; c.lineWidth = 8; c.stroke();
+    if (type === 'mother' && s === 1) { // camera-lens eye
+      c.fillStyle = '#161616'; c.beginPath(); c.arc(s * ex, ey, er * 0.82, 0, 7); c.fill();
+      c.strokeStyle = '#555'; c.lineWidth = 4;
+      for (const k of [0.75, 0.55, 0.35]) { c.beginPath(); c.arc(s * ex, ey, er * k, 0, 7); c.stroke(); }
+      glowDot(c, s * ex, ey, er * 0.18, '#ff1a1a', 45);
+    } else {
+      glowDot(c, s * ex + (Math.random() - 0.5) * 5, ey + (Math.random() - 0.5) * 5, type === 'child' ? 7 : 5, P[2], 34);
+    }
+  }
+  // dark oil leaking from the eyes
+  c.strokeStyle = 'rgba(12,4,2,.9)'; c.lineCap = 'round';
+  for (const s of [-1, 1]) {
+    c.lineWidth = 11; c.beginPath(); c.moveTo(s * ex - 10, ey + er * 0.8);
+    c.bezierCurveTo(s * ex - 16, ey + er * 1.6, s * ex - 2, ey + er * 2.2, s * ex - 12, ey + er * 3); c.stroke();
+    c.lineWidth = 6; c.beginPath(); c.moveTo(s * ex + 18, ey + er * 0.75); c.lineTo(s * ex + 23, ey + er * 1.9); c.stroke();
+  }
+
+  // mouth
+  const my = type === 'child' ? 128 : 140;
+  if (type === 'child') {
+    c.fillStyle = '#070202'; c.beginPath(); c.ellipse(0, my, 52, 40 + 38 * jaw, 0, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(10,5,0,.75)'; c.lineWidth = 3; c.beginPath();
+    c.moveTo(-122, -2); c.lineTo(-136, 34); c.lineTo(-118, 58); c.lineTo(-142, 100); c.stroke(); // crack
+  } else {
+    const mw = type === 'father' ? 140 : 160, mh = 30 + 75 * jaw;
+    c.fillStyle = '#070202'; c.beginPath(); rr(c, -mw, my - mh / 2, mw * 2, mh, 22); c.fill();
+    c.fillStyle = '#ddd3c0';
+    const n = type === 'father' ? 8 : 11, tw = mw * 2 / n;
+    for (let i = 0; i < n; i++) {
+      const x = -mw + i * tw;
+      c.beginPath(); c.moveTo(x + 2, my - mh / 2); c.lineTo(x + tw - 2, my - mh / 2); c.lineTo(x + tw / 2, my - mh / 2 + tw * 0.9); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(x + 2, my + mh / 2); c.lineTo(x + tw - 2, my + mh / 2); c.lineTo(x + tw / 2, my + mh / 2 - tw * 0.9); c.closePath(); c.fill();
+    }
+    if (type === 'father') { c.strokeStyle = 'rgba(20,10,5,.6)'; c.lineWidth = 5; c.beginPath(); c.moveTo(-mw - 30, my - 40); c.lineTo(-mw - 30, my + 60); c.moveTo(mw + 30, my - 40); c.lineTo(mw + 30, my + 60); c.stroke(); }
+  }
+  c.restore();
+}
+
+let scaring = false;
+function jumpscare(type) {
+  return new Promise((res) => {
+    scaring = true;
+    $('#scare').hidden = false;
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    scareCv.width = Math.round(innerWidth * dpr); scareCv.height = Math.round(innerHeight * dpr);
+    if (ac) scream();
+    const t0 = performance.now(), DUR = 1700;
+    const pat = sx.createPattern(grain, 'repeat');
+    const frame = (now) => {
+      const el = now - t0, t = el / 1000, W = scareCv.width, H = scareCv.height;
+      if (el >= DUR) { $('#scare').hidden = true; scaring = false; return res(); }
+      const fade = 1 - el / DUR;
+      if (t > 0.15 && Math.random() < 0.08) {
+        sx.fillStyle = Math.random() < 0.5 ? '#000' : '#5a0006'; sx.fillRect(0, 0, W, H);
+      } else {
+        const k = 1 - Math.pow(1 - Math.min(1, t / 0.16), 3);
+        const scale = 0.35 + k * 1.05 + Math.sin(t * 55) * 0.025;
+        const shk = 30 * fade * dpr;
+        drawFace(sx, W, H, type, t, scale, (Math.random() - 0.5) * shk, (Math.random() - 0.5) * shk);
+        sx.save(); sx.globalCompositeOperation = 'multiply'; // red grade that keeps the blacks black
+        const gb = (40 + Math.random() * 50 * fade) | 0; sx.fillStyle = `rgb(255,${gb},${gb})`; sx.fillRect(0, 0, W, H);
+        sx.restore();
+        const vg = sx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.22, W / 2, H / 2, Math.max(W, H) * 0.7);
+        vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.9)');
+        sx.fillStyle = vg; sx.fillRect(0, 0, W, H);
+        sx.save(); sx.globalAlpha = 0.16; sx.globalCompositeOperation = 'overlay';
+        sx.translate(Math.random() * 128, Math.random() * 128); sx.fillStyle = pat; sx.fillRect(-128, -128, W + 256, H + 256);
+        sx.restore();
+        sx.fillStyle = 'rgba(0,0,0,.25)';
+        for (let y = 0; y < H; y += 4 * dpr) sx.fillRect(0, y, W, 1.5 * dpr);
+        if (Math.random() < 0.4) { // tearing band
+          const y = Math.random() * H, h = H * (0.03 + Math.random() * 0.08);
+          sx.drawImage(scareCv, 0, y, W, h, (Math.random() - 0.5) * 70 * dpr, y, W, h);
+        }
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+}
+
+// ================= game flow =================
+let session = null;
+let lastMode = null;
+
+async function runRound(type, tok) {
+  const C = CHARS[type];
+  openStage({ tag: `${C.code} · ${C.name} · ${C.sense}`, title: C.approach, rule: C.rule, mode: '' });
+  CUES[type]();
+  if (!(await timed(3000, (p) => setProg(p), tok))) return 'cancel';
+
+  // check phase
+  openStage({ tag: `${C.code} · ${C.name}`, title: C.arrived, rule: C.rule, mode: 'check' });
+  const amb = ac.createGain(); amb.connect(master);
+  if (AMBIENT[type]) AMBIENT[type](CFG.checkSec, amb);
+  let viol = 0, grace = C.grace, reason = null, dead = false;
+  gazeRef = null;
+  const ok = await timed(CFG.checkSec * 1000, (p, dt, el) => {
+    setProg(p);
+    if (el < 350) return false; // reaction window
+    // the Father locks where your pupils are the moment he arrives; moving them counts
+    if (type === 'father' && !gazeRef && S.gaze) gazeRef = S.gaze.slice();
+    const v = violation(type);
+    if (v) { viol += dt; reason = v.msg; grace = v.grace; } else viol = Math.max(0, viol - dt * 0.5);
+    const live = $('#stLive');
+    const extra = type === 'father' && gazeRef ? ` (العين ${gazeDrift().toFixed(2)})` : '';
+    live.textContent = (v ? '⚠ ' + v.msg : '✓ ' + C.okText) + extra;
+    live.className = 'stLive ' + (v ? 'hot' : 'cool');
+    $('#stDanger').style.width = clamp(viol / grace, 0, 1) * 100 + '%';
+    if (viol >= grace) { dead = true; return true; }
+    return false;
+  }, tok);
+  gazeRef = null;
+  amb.gain.setTargetAtTime(0, ac.currentTime, 0.03);
+  setTimeout(() => amb.disconnect(), 400);
+  if (!ok) return 'cancel';
+
+  closeStage();
+  if (dead) {
+    await jumpscare(type);
+    showResult(false, `💀 ${C.dieTitle}`, `${reason}.<br>القاعدة: ${C.rule}`);
+    return 'dead';
+  }
+  chime();
+  openStage({ tag: C.code, title: C.safeText, rule: 'نجوت ✓', mode: 'safe', cancel: false });
+  setProg(1);
+  await wait(1300);
+  closeStage();
+  return 'ok';
+}
+
+function guard(type) {
+  if (sensorReady(type)) return true;
+  note(`حساس ${CHARS[type].name} متوقف (الكاميرا أو نموذج الوجه ما اشتغل).`);
+  return false;
+}
+
+async function playSingle(type) {
+  if (session || scaring) return;
+  if (!guard(type)) return;
+  lastMode = () => playSingle(type);
+  session = { cancelled: false };
+  await runRound(type, session);
+  session = null;
+}
+
+async function playNight() {
+  if (session || scaring) return;
+  const pool = TYPES.filter(sensorReady);
+  if (!pool.length) { note('ما فيه حساس شغال.'); return; }
+  lastMode = playNight;
+  const tok = session = { cancelled: false };
+  for (let i = 0; i < 5; i++) {
+    openStage({ tag: 'NIGHT 1', title: `${i + 1} AM`, rule: 'هدوء… راقب وأنصت.', mode: '' });
+    if (!(await timed(1500 + Math.random() * 2500, (p) => setProg(p), tok))) { session = null; return; }
+    const r = await runRound(pool[Math.floor(Math.random() * pool.length)], tok);
+    if (r !== 'ok') { session = null; return; }
+  }
+  session = null;
+  showResult(true, '6 AM — نجوت الليلة', 'خمس زيارات وما مسكك أحد.');
+}
+
+function showResult(win, title, sub) {
+  $('#result').hidden = false;
+  $('#resBox').className = 'resBox' + (win ? ' win' : '');
+  $('#resTitle').textContent = title;
+  $('#resSub').innerHTML = sub;
+}
+
+async function calibrate() {
+  if (session) return;
+  const tok = session = { cancelled: false };
+  openStage({ tag: 'CALIBRATION', title: 'معايرة', rule: 'اجلس عادي قدام الكاميرا، اثبت وخلك ساكت ٣ ثواني.', mode: '', cancel: false });
+  await timed(1200, null, tok);
+  const ms = [], mics = [];
+  const done = await timed(2600, (p) => { setProg(p); ms.push(S.motion); mics.push(S.mic); }, tok);
+  if (!done || ms.length < 10) { closeStage(); session = null; return; }
+  const p90 = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length * 0.9)] || 0; };
+  if (S.camOK) CFG.motionThr = r1(clamp(Math.max(2.5, p90(ms) * 3 + 1), 0.5, 15));
+  if (S.micOK) CFG.micThr = Math.round(clamp(Math.max(40, p90(mics) + 18), 10, 95));
+  syncSliders();
+  closeStage();
+  session = null;
+}
+
+// ================= start =================
+async function startAll() {
+  $('#btnStart').disabled = true;
+  initAudio();
+  await ac.resume();
+
+  setLoad('نطلب إذن الكاميرا والمايك…');
+  let stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+    });
+  } catch (e) {
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: true }); note('المايك ما اشتغل، فقاعدة الصوت عند الأب متوقفة (الحركة شغالة).'); }
+    catch (e2) {
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); note('الكاميرا ما اشتغلت (' + e2.name + '). الأب يشتغل بالمايك بس، والأم والطفل متوقفين.'); }
+      catch (e3) { note('الكاميرا والمايك ما اشتغلوا (' + e3.name + '). تقدر تجرب الجمب سكير بس.'); }
+    }
+  }
+  if (stream) {
+    if (stream.getVideoTracks().length) { video.srcObject = stream; await video.play().catch(() => {}); S.camOK = true; }
+    if (stream.getAudioTracks().length) {
+      const src = ac.createMediaStreamSource(stream);
+      analyser = ac.createAnalyser(); analyser.fftSize = 1024; micData = new Float32Array(analyser.fftSize);
+      src.connect(analyser); S.micOK = true;
+    }
+  }
+
+  if (S.camOK) {
+    setLoad('نحمّل نموذج الوجه (أول مرة ياخذ ثواني)…');
+    try {
+      const vision = await import(`${VISION_URL}/vision_bundle.mjs`);
+      const fileset = await vision.FilesetResolver.forVisionTasks(`${VISION_URL}/wasm`);
+      const opts = (delegate) => ({ baseOptions: { modelAssetPath: MODEL_URL, delegate }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true });
+      try { landmarker = await vision.FaceLandmarker.createFromOptions(fileset, opts('GPU')); }
+      catch (e) { console.warn('GPU failed, using CPU', e); landmarker = await vision.FaceLandmarker.createFromOptions(fileset, opts('CPU')); }
+      S.faceOK = true;
+    } catch (e) {
+      console.error(e);
+      note('نموذج الوجه ما تحمّل (يحتاج إنترنت أول مرة). الأم والطفل متوقفين.');
+    }
+  }
+
+  $('#start').hidden = true; $('#app').hidden = false;
+  buildCards(); syncSliders();
+  requestAnimationFrame(loop);
+  if (S.camOK || S.micOK) await calibrate();
+}
+
+$('#btnStart').addEventListener('click', startAll);
+$('#btnNight').addEventListener('click', playNight);
+$('#btnCalib').addEventListener('click', calibrate);
+$('#btnScare').addEventListener('click', async () => {
+  if (session || scaring) return;
+  const type = TYPES[Math.floor(Math.random() * 3)];
+  lastMode = null;
+  await jumpscare(type);
+  showResult(false, `💀 ${CHARS[type].dieTitle}`, 'تجربة الجمب سكير.');
+});
+$('#btnCancel').addEventListener('click', () => { if (session) session.cancelled = true; closeStage(); });
+$('#btnAgain').addEventListener('click', () => { $('#result').hidden = true; if (lastMode) lastMode(); });
+$('#btnHome').addEventListener('click', () => { $('#result').hidden = true; });
+document.addEventListener('keydown', (e) => {
+  if ($('#app').hidden) return;
+  if (e.key === 'Escape') { if (session) { session.cancelled = true; closeStage(); } $('#result').hidden = true; return; }
+  if (!$('#result').hidden) return;
+  const t = TYPES.find((k) => CHARS[k].key === e.key);
+  if (t) playSingle(t);
+});
+</script>
+</body>
+</html>
